@@ -405,8 +405,9 @@ if not st.session_state.authenticated:
                     if verification_input == st.session_state.verification_code:
                         st.session_state.authenticated = True
                         st.session_state.user_id = generate_user_id(st.session_state.user_email)
-                        st.session_state.airdrops = load_user_data(st.session_state.user_id)
-                        st.success("✅ Successfully logged in!")
+                        with st.spinner("Loading your data..."):
+                            st.session_state.airdrops = load_user_data(st.session_state.user_id)
+                        st.success(f"✅ Successfully logged in! Loaded {len(st.session_state.airdrops)} entries.")
                         st.rerun()
                     else:
                         st.error("❌ Invalid code. Please try again.")
@@ -424,7 +425,16 @@ if not st.session_state.authenticated:
 else:
     # Main App (After Authentication)
     st.title("🪂 Airdrop Hunting Tracker")
-    st.markdown(f"Logged in as: **{st.session_state.user_email}**")
+    st.markdown(f"Logged in as: **{st.session_state.user_email}** (ID: `{st.session_state.user_id}`)")
+    
+    # Debug info
+    with st.expander("🔍 Debug Info"):
+        st.write(f"User ID: {st.session_state.user_id}")
+        st.write(f"Number of airdrops in memory: {len(st.session_state.airdrops)}")
+        if st.button("Force Reload from Sheets"):
+            st.session_state.airdrops = load_user_data(st.session_state.user_id)
+            st.success(f"Loaded {len(st.session_state.airdrops)} entries from Google Sheets")
+            st.rerun()
     
     # Instructions box
     st.markdown("""
