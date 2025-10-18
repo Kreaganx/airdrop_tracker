@@ -61,7 +61,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Google Sheets connection
-@st.cache_resource
 def get_sheets_service():
     try:
         credentials = service_account.Credentials.from_service_account_info(
