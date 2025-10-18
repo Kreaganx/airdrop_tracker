@@ -134,11 +134,29 @@ def load_user_data(user_id):
             return []
         
         sheet_id = st.secrets["sheet_id"]
-        range_name = "UserData!A:K"
         
+        # First check if UserData sheet exists, if not create it
+        try:
+            result = service.spreadsheets().values().get(
+                spreadsheetId=sheet_id,
+                range="UserData!A1:K1"
+            ).execute()
+        except:
+            # Sheet doesn't exist or is empty, create header
+            header = [['User ID', 'Protocol Name', 'Status', 'Expected Date', 'Ref Link', 
+                      'Tasks Completed', 'Wallet Used', 'TX Count', 'Amount Invested', 'Last Activity', 'Notes']]
+            service.spreadsheets().values().update(
+                spreadsheetId=sheet_id,
+                range="UserData!A1",
+                valueInputOption="RAW",
+                body={'values': header}
+            ).execute()
+            return []
+        
+        # Load all data
         result = service.spreadsheets().values().get(
             spreadsheetId=sheet_id,
-            range=range_name
+            range="UserData!A:K"
         ).execute()
         
         values = result.get('values', [])
@@ -157,14 +175,14 @@ def load_user_data(user_id):
                     'Ref Link': row[4],
                     'Tasks Completed': row[5],
                     'Wallet Used': row[6],
-                    'TX Count': int(row[7]) if row[7] else 0,
+                    'TX Count': int(row[7]) if row[7] and row[7].isdigit() else 0,
                     'Amount Invested': row[8],
                     'Last Activity': row[9],
                     'Notes': row[10]
                 })
         return user_data
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        st.error(f"Error loading user data: {e}")
         return []
 
 def save_user_data(user_id, data):
