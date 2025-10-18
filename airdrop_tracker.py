@@ -63,14 +63,23 @@ st.markdown("""
 # Google Sheets connection
 def get_sheets_service():
     try:
+        # Convert secrets to proper format for credentials
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        
+        # Ensure private_key has proper newlines
+        if 'private_key' in creds_dict:
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+        
         credentials = service_account.Credentials.from_service_account_info(
-            st.secrets["gcp_service_account"],
+            creds_dict,
             scopes=["https://www.googleapis.com/auth/spreadsheets"]
         )
         service = build('sheets', 'v4', credentials=credentials)
         return service
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
+        import traceback
+        st.error(traceback.format_exc())
         return None
 
 def generate_user_id(email):
@@ -190,24 +199,30 @@ def save_user_data(user_id, data):
     try:
         service = get_sheets_service()
         if not service:
+            st.error("Could not connect to Google Sheets service")
             return False
         
         sheet_id = st.secrets["sheet_id"]
         
-        # First, remove existing user data
-        result = service.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range="UserData!A:K"
-        ).execute()
-        
-        existing_values = result.get('values', [])
+        # Get existing data
+        try:
+            result = service.spreadsheets().values().get(
+                spreadsheetId=sheet_id,
+                range="UserData!A:K"
+            ).execute()
+            existing_values = result.get('values', [])
+        except:
+            existing_values = []
         
         # Keep header and other users' data
-        filtered_values = [existing_values[0]] if existing_values else [['User ID', 'Protocol Name', 'Status', 'Expected Date', 'Ref Link', 'Tasks Completed', 'Wallet Used', 'TX Count', 'Amount Invested', 'Last Activity', 'Notes']]
-        
-        for row in existing_values[1:]:
-            if len(row) > 0 and row[0] != user_id:
-                filtered_values.append(row)
+        if not existing_values:
+            filtered_values = [['User ID', 'Protocol Name', 'Status', 'Expected Date', 'Ref Link', 
+                              'Tasks Completed', 'Wallet Used', 'TX Count', 'Amount Invested', 'Last Activity', 'Notes']]
+        else:
+            filtered_values = [existing_values[0]]
+            for row in existing_values[1:]:
+                if len(row) > 0 and row[0] != user_id:
+                    filtered_values.append(row)
         
         # Add current user's data
         for item in data:
@@ -227,6 +242,7 @@ def save_user_data(user_id, data):
         
         body = {'values': filtered_values}
         
+        # Clear and update
         service.spreadsheets().values().clear(
             spreadsheetId=sheet_id,
             range="UserData!A:K"
@@ -241,7 +257,7 @@ def save_user_data(user_id, data):
         
         return True
     except Exception as e:
-        st.error(f"Error saving data: {e}")
+        st.error(f"Error saving user data: {str(e)}")
         return False
 
 def send_email_alert(to_email, subject, body):
