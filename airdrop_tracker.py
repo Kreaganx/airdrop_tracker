@@ -742,3 +742,44 @@ else:
         <p>Built with Streamlit • Your Personal Airdrop Tracker 🚀</p>
     </div>
     """, unsafe_allow_html=True)
+                    st.session_state.airdrops.append(new_airdrop)
+                with st.spinner("Saving..."):
+                    if save_user_data(st.session_state.user_id, st.session_state.airdrops):
+                        st.success("✅ Added new protocol!")
+                        if add_to_cal and expected_date:
+                            success, message = add_to_calendar(
+                                protocol_name,
+                                expected_date,
+                                ref_link,
+                                st.session_state.user_email
+                            )
+                            if success:
+                                st.success(f"📅 {message}")
+                            else:
+                                st.warning(f"⚠️ {message}")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save to Google Sheets.")
+            else:
+                st.error("Please provide a Protocol Name before saving.")
+                st.session_state.airdrops.append(new_airdrop)
+                with st.spinner("Saving..."):
+                    if save_user_data(st.session_state.user_id, st.session_state.airdrops):
+                        st.success("✅ Added new protocol!")
+                        if add_to_cal and expected_date:
+                            success, message = add_to_calendar(
+                                protocol_name,
+                                expected_date,
+                                ref_link,
+                                st.session_state.user_email
+                            )
+                            if success:
+                                st.success(f"📅 {message}")
+                            else:
+                                st.warning(f"⚠️ {message}")
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to save to Google Sheets.")
+            else:
+                st.error("Please provide a Protocol Name before saving.")
+
