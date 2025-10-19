@@ -591,4 +591,101 @@ else:
                             with edit_col2:
                                 new_tasks = st.text_area("Tasks Completed", value=airdrop.get('Tasks Completed', ''))
                                 new_wallet = st.text_input("Wallet Used", value=airdrop.get('Wallet Used', ''))
-                                new_tx = st.number_input("TX Count", min_value=0, value=int(airdrop.get('TX Count
+                                new_tx = st.number_input("TX Count", min_value=0, value=int(airdrop.get('TX Count', 0)))
+                            with edit_col3:
+                                new_amount = st.text_input("Amount Invested", value=airdrop.get('Amount Invested', ''))
+                                new_last = st.date_input("Last Activity", 
+                                                        value=datetime.strptime(airdrop.get('Last Activity'), '%Y-%m-%d').date() if airdrop.get('Last Activity') else date.today())
+                                new_notes = st.text_area("Notes", value=airdrop.get('Notes', ''))
+                            col_save, col_cancel = st.columns(2)
+                            with col_save:
+                                save_edit = st.form_submit_button("💾 Save Changes", use_container_width=True)
+                            with col_cancel:
+                                cancel_edit = st.form_submit_button("❌ Cancel", use_container_width=True)
+                            if save_edit:
+                                actual_idx = st.session_state.airdrops.index(airdrop)
+                                st.session_state.airdrops[actual_idx] = {
+                                    'Protocol Name': new_protocol,
+                                    'Status': new_status,
+                                    'Expected Date': new_expected.strftime('%Y-%m-%d') if new_expected else '',
+                                    'Ref Link': new_ref,
+                                    'Tasks Completed': new_tasks,
+                                    'Wallet Used': new_wallet,
+                                    'TX Count': int(new_tx),
+                                    'Amount Invested': new_amount,
+                                    'Last Activity': new_last.strftime('%Y-%m-%d'),
+                                    'Notes': new_notes
+                                }
+                                with st.spinner("Saving changes..."):
+                                    if save_user_data(st.session_state.user_id, st.session_state.airdrops):
+                                        st.session_state[f'editing_{idx}'] = False
+                                        st.success("✅ Changes saved!")
+                                        st.rerun()
+                            if cancel_edit:
+                                st.session_state[f'editing_{idx}'] = False
+                                st.rerun()
+    else:
+        st.info("No airdrops tracked yet. Add your first protocol below!")
+    
+    # Add new airdrop form
+    st.markdown("---")
+    st.subheader("➕ Add New Protocol")
+    with st.form("add_airdrop_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            protocol_name = st.text_input("Protocol Name*")
+            status = st.selectbox("Status", ["Active", "Upcoming", "Completed"])
+            expected_date = st.date_input("Expected Date", value=None)
+            ref_link = st.text_input("Referral Link")
+        with col2:
+            tasks = st.text_area("Tasks Completed", height=100)
+            wallet = st.text_input("Wallet Used")
+            tx_count = st.number_input("TX Count", min_value=0, value=0, step=1)
+        with col3:
+            amount_invested = st.text_input("Amount Invested (e.g., $500)")
+            last_activity = st.date_input("Last Activity", value=date.today())
+            notes = st.text_area("Notes", height=100)
+            add_to_cal = st.checkbox("📅 Add to Google Calendar", value=False, 
+                                     help="Add this airdrop date to your Google Calendar")
+        submitted = st.form_submit_button("Add Protocol", use_container_width=True)
+        if submitted:
+            if protocol_name:
+                new_airdrop = {
+                    'Protocol Name': protocol_name,
+                    'Status': status,
+                    'Expected Date': expected_date.strftime('%Y-%m-%d') if expected_date else '',
+                    'Ref Link': ref_link,
+                    'Tasks Completed': tasks,
+                    'Wallet Used': wallet,
+                    'TX Count': int(tx_count),
+                    'Amount Invested': amount_invested,
+                    'Last Activity': last_activity.strftime('%Y-%m-%d'),
+                    'Notes': notes
+                }
+                st.session_state.airdrops.append(new_airdrop)
+                with st.spinner("Saving..."):
+                    if save_user_data(st.session_state.user_id, st.session_state.airdrops):
+                        st.success(f"✅ Added {protocol_name}!")
+                        if add_to_cal and expected_date:
+                            with st.spinner("Adding to Google Calendar..."):
+                                success, message = add_to_calendar(
+                                    protocol_name, 
+                                    expected_date, 
+                                    ref_link, 
+                                    st.session_state.user_email
+                                )
+                                if success:
+                                    st.success(f"📅 {message}")
+                                else:
+                                    st.warning(f"⚠️ {message}")
+                        st.rerun()
+            else:
+                st.error("Please enter a protocol name")
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; color: white; padding: 20px;">
+        <p>Built with Streamlit • Your Personal Airdrop Tracker 🚀</p>
+    </div>
+    """, unsafe_allow_html=True)
