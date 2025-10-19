@@ -591,4 +591,4 @@ else:
                             with edit_col2:
                                 new_tasks = st.text_area("Tasks Completed", value=airdrop.get('Tasks Completed', ''))
                                 new_wallet = st.text_input("Wallet Used", value=airdrop.get('Wallet Used', ''))
-                                new_tx = st.number_input("TX Count", min_value=0, value=int(airdrop.get('TX
+                                new_tx = st.number_input("TX Count", min_value=0, value=int(airdrop.get('TX Count
