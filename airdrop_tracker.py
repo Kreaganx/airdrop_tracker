@@ -184,19 +184,20 @@ def load_user_data(user_id):
         for idx, row in enumerate(values[1:], start=2):
             if len(row) > 0:
                 row_user_id = row[0] if len(row) > 0 else ""
-                st.info(f"Row {idx}: User ID = '{row_user_id}' (looking for '{user_id}')")
+                st.info(f"Row {idx}: User ID = '{row_user_id}' (length={len(row)}, looking for '{user_id}')")
                 
-                if row_user_id == user_id and len(row) >= 11:
+                if row_user_id == user_id and len(row) >= 2:  # Changed from 11 to 2 - just need User ID and Protocol Name
+                    # Safely get values with defaults for missing columns
                     user_data.append({
-                        'Protocol Name': row[1],
-                        'Status': row[2],
-                        'Expected Date': row[3],
-                        'Ref Link': row[4],
-                        'Tasks Completed': row[5],
-                        'Wallet Used': row[6],
-                        'TX Count': int(row[7]) if row[7] and str(row[7]).replace('-','').isdigit() else 0,
-                        'Amount Invested': row[8],
-                        'Last Activity': row[9],
+                        'Protocol Name': row[1] if len(row) > 1 else '',
+                        'Status': row[2] if len(row) > 2 else 'Active',
+                        'Expected Date': row[3] if len(row) > 3 else '',
+                        'Ref Link': row[4] if len(row) > 4 else '',
+                        'Tasks Completed': row[5] if len(row) > 5 else '',
+                        'Wallet Used': row[6] if len(row) > 6 else '',
+                        'TX Count': int(row[7]) if len(row) > 7 and row[7] and str(row[7]).replace('-','').isdigit() else 0,
+                        'Amount Invested': row[8] if len(row) > 8 else '',
+                        'Last Activity': row[9] if len(row) > 9 else '',
                         'Notes': row[10] if len(row) > 10 else ''
                     })
         
