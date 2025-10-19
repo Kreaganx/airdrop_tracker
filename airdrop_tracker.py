@@ -140,17 +140,19 @@ def load_user_data(user_id):
     try:
         service = get_sheets_service()
         if not service:
+            st.warning("Could not connect to Google Sheets service")
             return []
         
         sheet_id = st.secrets["sheet_id"]
         
-        # First check if UserData sheet exists, if not create it
+        # First check if UserData sheet exists
         try:
             result = service.spreadsheets().values().get(
                 spreadsheetId=sheet_id,
                 range="UserData!A1:K1"
             ).execute()
-        except:
+        except Exception as e:
+            st.warning(f"UserData sheet not found or error accessing it: {e}")
             # Sheet doesn't exist or is empty, create header
             header = [['User ID', 'Protocol Name', 'Status', 'Expected Date', 'Ref Link', 
                       'Tasks Completed', 'Wallet Used', 'TX Count', 'Amount Invested', 'Last Activity', 'Notes']]
@@ -160,6 +162,7 @@ def load_user_data(user_id):
                 valueInputOption="RAW",
                 body={'values': header}
             ).execute()
+            st.info("Created UserData sheet with headers")
             return []
         
         # Load all data
@@ -170,28 +173,39 @@ def load_user_data(user_id):
         
         values = result.get('values', [])
         
+        st.info(f"Total rows in sheet: {len(values)}")
+        
         if not values or len(values) < 2:
+            st.info("No data rows found in sheet")
             return []
         
         # Filter data for this user
         user_data = []
-        for row in values[1:]:
-            if len(row) >= 11 and row[0] == user_id:
-                user_data.append({
-                    'Protocol Name': row[1],
-                    'Status': row[2],
-                    'Expected Date': row[3],
-                    'Ref Link': row[4],
-                    'Tasks Completed': row[5],
-                    'Wallet Used': row[6],
-                    'TX Count': int(row[7]) if row[7] and row[7].isdigit() else 0,
-                    'Amount Invested': row[8],
-                    'Last Activity': row[9],
-                    'Notes': row[10]
-                })
+        for idx, row in enumerate(values[1:], start=2):
+            if len(row) > 0:
+                row_user_id = row[0] if len(row) > 0 else ""
+                st.info(f"Row {idx}: User ID = '{row_user_id}' (looking for '{user_id}')")
+                
+                if row_user_id == user_id and len(row) >= 11:
+                    user_data.append({
+                        'Protocol Name': row[1],
+                        'Status': row[2],
+                        'Expected Date': row[3],
+                        'Ref Link': row[4],
+                        'Tasks Completed': row[5],
+                        'Wallet Used': row[6],
+                        'TX Count': int(row[7]) if row[7] and str(row[7]).replace('-','').isdigit() else 0,
+                        'Amount Invested': row[8],
+                        'Last Activity': row[9],
+                        'Notes': row[10] if len(row) > 10 else ''
+                    })
+        
+        st.success(f"Found {len(user_data)} entries for user {user_id}")
         return user_data
     except Exception as e:
         st.error(f"Error loading user data: {e}")
+        import traceback
+        st.error(traceback.format_exc())
         return []
 
 def save_user_data(user_id, data):
