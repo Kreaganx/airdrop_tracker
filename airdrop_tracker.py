@@ -10,6 +10,7 @@ from email.mime.multipart import MIMEMultipart
 import hashlib
 import random
 import string
+import traceback
 
 # Page configuration
 st.set_page_config(
@@ -18,9 +19,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS -- updated to make cards darker and text darker
 st.markdown("""
     <style>
+    /* Page background */
     .main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -30,20 +32,59 @@ st.markdown("""
     h1 {
         color: white !important;
     }
+
+    /* Info box (top instructions) */
     .info-box {
-        background-color: rgba(255, 255, 255, 0.9);
+        background-color: rgba(255, 255, 255, 0.95);
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 20px;
         border-left: 5px solid #667eea;
+        color: #111 !important;
     }
+
+    /* Login box styling */
     .login-box {
-        background-color: white;
+        background-color: rgba(255,255,255,0.98);
         padding: 30px;
         border-radius: 15px;
         max-width: 500px;
         margin: 50px auto;
         box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        color: #111 !important;
+    }
+
+    /* Darker card appearance for your airdrop entries (overriding inline white backgrounds) */
+    .airdrop-card {
+        background: #f2f3f5 !important; /* slightly darker than pure white */
+        color: #111 !important;
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid rgba(0,0,0,0.08);
+    }
+
+    /* Task & notes boxes inside card */
+    .card-subbox {
+        background: #ededf0 !important;
+        color: #111 !important;
+        padding: 10px;
+        border-radius: 5px;
+    }
+
+    /* Markdown and other container text forced darker where appropriate */
+    .stMarkdown p, .stMarkdown li, div[data-testid="stMarkdownContainer"] {
+        color: #111 !important;
+    }
+    h3, h4, h5, h6 {
+        color: #111 !important;
+    }
+    p, span, strong, code {
+        color: #111 !important;
+    }
+
+    /* Link button tweaks */
+    .stButton button {
+        border-radius: 8px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -62,7 +103,6 @@ def get_sheets_service():
         return service
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
-        import traceback
         st.error(traceback.format_exc())
         return None
 
@@ -79,6 +119,7 @@ def get_calendar_service():
         return service
     except Exception as e:
         st.error(f"Error connecting to Google Calendar: {e}")
+        st.error(traceback.format_exc())
         return None
 
 def generate_user_id(email):
@@ -172,6 +213,7 @@ def load_user_data(user_id):
         return user_data
     except Exception as e:
         st.error(f"Error loading user data: {e}")
+        st.error(traceback.format_exc())
         return []
 
 def save_user_data(user_id, data):
@@ -224,9 +266,14 @@ def save_user_data(user_id, data):
         return True
     except Exception as e:
         st.error(f"Error saving user data: {str(e)}")
+        st.error(traceback.format_exc())
         return False
 
 def add_to_calendar(protocol_name, expected_date, ref_link, user_email):
+    """
+    Updated: Removes attendees to avoid service account 'invite' errors.
+    The event will be added to the calendar (service account's calendar or the calendar_id configured).
+    """
     try:
         service = get_calendar_service()
         if not service:
@@ -253,12 +300,11 @@ def add_to_calendar(protocol_name, expected_date, ref_link, user_email):
                     {'method': 'popup', 'minutes': 60},
                 ],
             },
-            'attendees': [
-                {'email': user_email}
-            ]
         }
         calendar_id = st.secrets.get("calendar_id", "primary")
-        event = service.events().insert(calendarId=calendar_id, body=event, sendNotifications=True).execute()
+        # NOTE: we do NOT include 'attendees' here, and we do not set sendNotifications=True,
+        # because service accounts can't invite attendees without Domain-Wide Delegation.
+        event = service.events().insert(calendarId=calendar_id, body=event).execute()
         return True, f"Added to calendar!"
     except Exception as e:
         return False, f"Error adding to calendar: {str(e)}"
@@ -532,26 +578,32 @@ else:
                             days_until_text = f"📅 {abs(days_until)} days ago"
                     except:
                         pass
+                # Use updated card class 'airdrop-card' so CSS applies for darker background & dark text
                 with st.expander(f"{status_icon} **{airdrop.get('Protocol Name', 'Unknown')}** - {status} {days_until_text}", expanded=False):
                     col1, col2 = st.columns([3, 1])
                     with col1:
+                        # Modified styles: using airdrop-card class and darker text
                         st.markdown(f"""
-                        <div style="background: white; padding: 20px; border-radius: 10px; border-left: 5px solid {status_color};">
-                            <h3 style="color: #667eea; margin-top: 0;">{airdrop.get('Protocol Name', 'Unknown')}</h3>
-                            <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: {status_color};">{status}</span></p>
-                            <p style="margin: 5px 0;"><strong>Expected Date:</strong> {airdrop.get('Expected Date', 'Not set')} {days_until_text}</p>
-                            <p style="margin: 5px 0;"><strong>Wallet:</strong> <code>{airdrop.get('Wallet Used', 'N/A')}</code></p>
-                            <p style="margin: 5px 0;"><strong>TX Count:</strong> {airdrop.get('TX Count', 0)}</p>
-                            <p style="margin: 5px 0;"><strong>Amount Invested:</strong> {airdrop.get('Amount Invested', 'N/A')}</p>
-                            <p style="margin: 5px 0;"><strong>Last Activity:</strong> {airdrop.get('Last Activity', 'N/A')}</p>
+                        <div class="airdrop-card" style="border-left: 5px solid {status_color};">
+                            <h3 style="margin-top: 0; color: #111;">{airdrop.get('Protocol Name', 'Unknown')}</h3>
+                            <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: {status_color}; font-weight: 700;">{status}</span></p>
+                            <p style="margin: 5px 0;"><strong>Expected Date:</strong> <span style="color:#111;">{airdrop.get('Expected Date', 'Not set')}</span> {days_until_text}</p>
+                            <p style="margin: 5px 0;"><strong>Wallet:</strong> <code style="background:#fff3db; padding:2px 6px; border-radius:4px; color:#111;">{airdrop.get('Wallet Used', 'N/A')}</code></p>
+                            <p style="margin: 5px 0;"><strong>TX Count:</strong> <span style="color:#111;">{airdrop.get('TX Count', 0)}</span></p>
+                            <p style="margin: 5px 0;"><strong>Amount Invested:</strong> <span style="color:#111;">{airdrop.get('Amount Invested', 'N/A')}</span></p>
+                            <p style="margin: 5px 0;"><strong>Last Activity:</strong> <span style="color:#111;">{airdrop.get('Last Activity', 'N/A')}</span></p>
                             <p style="margin: 10px 0 5px 0;"><strong>Tasks Completed:</strong></p>
-                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">{airdrop.get('Tasks Completed', 'None')}</p>
+                            <p class="card-subbox" style="margin: 0; padding: 10px;">{airdrop.get('Tasks Completed', 'None')}</p>
                             <p style="margin: 10px 0 5px 0;"><strong>Notes:</strong></p>
-                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">{airdrop.get('Notes', 'None')}</p>
+                            <p class="card-subbox" style="margin: 0; padding: 10px;">{airdrop.get('Notes', 'None')}</p>
                         </div>
                         """, unsafe_allow_html=True)
                         if airdrop.get('Ref Link'):
-                            st.link_button("🔗 Open Referral Link", airdrop.get('Ref Link'), use_container_width=True)
+                            # Use link_button if available; otherwise fallback to markdown link
+                            try:
+                                st.link_button("🔗 Open Referral Link", airdrop.get('Ref Link'), use_container_width=True)
+                            except:
+                                st.markdown(f'<a href="{airdrop.get("Ref Link")}" target="_blank" style="color:#0a66c2;">🔗 Open Referral Link</a>', unsafe_allow_html=True)
                     with col2:
                         if st.button("✏️ Edit", key=f"edit_{idx}", use_container_width=True):
                             st.session_state[f'editing_{idx}'] = True
@@ -576,6 +628,7 @@ else:
                                         st.success(f"📅 {message}")
                                     else:
                                         st.warning(f"⚠️ {message}")
+                    # Editing form (preserve behavior)
                     if st.session_state.get(f'editing_{idx}', False):
                         st.markdown("---")
                         st.subheader("Edit Entry")
