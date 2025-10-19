@@ -275,6 +275,72 @@ def save_user_data(user_id, data):
         st.error(f"Error saving user data: {str(e)}")
         return False
 
+def get_calendar_service():
+    """Get Google Calendar service"""
+    try:
+        # Convert secrets to proper format for credentials
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        
+        # Ensure private_key has proper newlines
+        if 'private_key' in creds_dict:
+            creds_dict['private_key'] = creds_dict['private_key'].replace('\\n', '\n')
+        
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_dict,
+            scopes=["https://www.googleapis.com/auth/calendar"]
+        )
+        service = build('calendar', 'v3', credentials=credentials)
+        return service
+    except Exception as e:
+        st.error(f"Error connecting to Google Calendar: {e}")
+        return None
+
+def add_to_calendar(protocol_name, expected_date, ref_link, user_email):
+    """Add airdrop to Google Calendar"""
+    try:
+        service = get_calendar_service()
+        if not service:
+            return False, "Could not connect to Google Calendar"
+        
+        # Parse the date
+        if isinstance(expected_date, str):
+            event_date = datetime.strptime(expected_date, '%Y-%m-%d')
+        else:
+            event_date = expected_date
+        
+        # Create event
+        event = {
+            'summary': f'🪂 {protocol_name} Airdrop',
+            'description': f'Airdrop claim day for {protocol_name}\n\nReferral Link: {ref_link}\n\nAdded via Airdrop Tracker',
+            'start': {
+                'date': event_date.strftime('%Y-%m-%d'),
+                'timeZone': 'America/New_York',
+            },
+            'end': {
+                'date': event_date.strftime('%Y-%m-%d'),
+                'timeZone': 'America/New_York',
+            },
+            'reminders': {
+                'useDefault': False,
+                'overrides': [
+                    {'method': 'email', 'minutes': 24 * 60},  # 1 day before
+                    {'method': 'popup', 'minutes': 60},  # 1 hour before
+                ],
+            },
+            'attendees': [
+                {'email': user_email}
+            ]
+        }
+        
+        # Get calendar ID from secrets or use primary
+        calendar_id = st.secrets.get("calendar_id", "primary")
+        
+        event = service.events().insert(calendarId=calendar_id, body=event, sendNotifications=True).execute()
+        
+        return True, f"Added to calendar! Event link: {event.get('htmlLink')}"
+    except Exception as e:
+        return False, f"Error adding to calendar: {str(e)}"
+
 def send_email_alert(to_email, subject, body):
     """Send email notification"""
     try:
@@ -622,6 +688,8 @@ else:
             amount_invested = st.text_input("Amount Invested (e.g., $500)")
             last_activity = st.date_input("Last Activity", value=date.today())
             notes = st.text_area("Notes", height=100)
+            add_to_cal = st.checkbox("📅 Add to Google Calendar", value=False, 
+                                     help="Add this airdrop date to your Google Calendar")
         
         submitted = st.form_submit_button("Add Protocol", use_container_width=True)
         
@@ -643,6 +711,21 @@ else:
                 with st.spinner("Saving..."):
                     if save_user_data(st.session_state.user_id, st.session_state.airdrops):
                         st.success(f"✅ Added {protocol_name}!")
+                        
+                        # Add to calendar if requested
+                        if add_to_cal and expected_date:
+                            with st.spinner("Adding to Google Calendar..."):
+                                success, message = add_to_calendar(
+                                    protocol_name, 
+                                    expected_date, 
+                                    ref_link, 
+                                    st.session_state.user_email
+                                )
+                                if success:
+                                    st.success(f"📅 {message}")
+                                else:
+                                    st.warning(f"⚠️ {message}")
+                        
                         st.rerun()
             else:
                 st.error("Please enter a protocol name")
