@@ -237,7 +237,7 @@ def add_to_calendar(protocol_name, expected_date, ref_link, user_email):
             event_date = expected_date
         event = {
             'summary': f'🪂 {protocol_name} Airdrop',
-            'description': f'Airdrop claim day for {protocol_name}\n\nReferral Link: {ref_link}\n\nAdded via Airdrop Tracker',
+            'description': f'Airdrop claim day for {protocol_name}\n\nReferral Link: {ref_link}\n\nUser: {user_email}\n\nAdded via Airdrop Tracker',
             'start': {
                 'date': event_date.strftime('%Y-%m-%d'),
                 'timeZone': 'America/New_York',
@@ -249,19 +249,16 @@ def add_to_calendar(protocol_name, expected_date, ref_link, user_email):
             'reminders': {
                 'useDefault': False,
                 'overrides': [
-                    {'method': 'email', 'minutes': 24 * 60},
-                    {'method': 'popup', 'minutes': 60},
+                    {'method': 'popup', 'minutes': 1440},  # 1 day before
+                    {'method': 'popup', 'minutes': 60},  # 1 hour before
                 ],
-            },
-            'attendees': [
-                {'email': user_email}
-            ]
+            }
         }
-        calendar_id = st.secrets.get("calendar_id", "primary")
-        event = service.events().insert(calendarId=calendar_id, body=event, sendNotifications=True).execute()
+        calendar_id = user_email  # Use user's email as calendar ID
+        event = service.events().insert(calendarId=calendar_id, body=event).execute()
         return True, f"Added to calendar!"
     except Exception as e:
-        return False, f"Error adding to calendar: {str(e)}"
+        return False, f"Error: {str(e)}"
 
 def send_email_alert(to_email, subject, body):
     try:
@@ -538,16 +535,16 @@ else:
                         st.markdown(f"""
                         <div style="background: white; padding: 20px; border-radius: 10px; border-left: 5px solid {status_color};">
                             <h3 style="color: #667eea; margin-top: 0;">{airdrop.get('Protocol Name', 'Unknown')}</h3>
-                            <p style="margin: 5px 0;"><strong>Status:</strong> <span style="color: {status_color};">{status}</span></p>
-                            <p style="margin: 5px 0;"><strong>Expected Date:</strong> {airdrop.get('Expected Date', 'Not set')} {days_until_text}</p>
-                            <p style="margin: 5px 0;"><strong>Wallet:</strong> <code>{airdrop.get('Wallet Used', 'N/A')}</code></p>
-                            <p style="margin: 5px 0;"><strong>TX Count:</strong> {airdrop.get('TX Count', 0)}</p>
-                            <p style="margin: 5px 0;"><strong>Amount Invested:</strong> {airdrop.get('Amount Invested', 'N/A')}</p>
-                            <p style="margin: 5px 0;"><strong>Last Activity:</strong> {airdrop.get('Last Activity', 'N/A')}</p>
-                            <p style="margin: 10px 0 5px 0;"><strong>Tasks Completed:</strong></p>
-                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">{airdrop.get('Tasks Completed', 'None')}</p>
-                            <p style="margin: 10px 0 5px 0;"><strong>Notes:</strong></p>
-                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px;">{airdrop.get('Notes', 'None')}</p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Status:</strong> <span style="color: {status_color};">{status}</span></p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Expected Date:</strong> {airdrop.get('Expected Date', 'Not set')} {days_until_text}</p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Wallet:</strong> <code style="color: #333;">{airdrop.get('Wallet Used', 'N/A')}</code></p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">TX Count:</strong> {airdrop.get('TX Count', 0)}</p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Amount Invested:</strong> {airdrop.get('Amount Invested', 'N/A')}</p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Last Activity:</strong> {airdrop.get('Last Activity', 'N/A')}</p>
+                            <p style="margin: 10px 0 5px 0; color: #333;"><strong style="color: #333;">Tasks Completed:</strong></p>
+                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px; color: #333;">{airdrop.get('Tasks Completed', 'None')}</p>
+                            <p style="margin: 10px 0 5px 0; color: #333;"><strong style="color: #333;">Notes:</strong></p>
+                            <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px; color: #333;">{airdrop.get('Notes', 'None')}</p>
                         </div>
                         """, unsafe_allow_html=True)
                         if airdrop.get('Ref Link'):
