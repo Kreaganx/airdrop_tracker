@@ -240,16 +240,16 @@ def save_user_data(user_id, data):
         for item in data:
             filtered_values.append([
                 user_id,
-                item.get('Protocol Name', ''),
-                item.get('Status', ''),
-                item.get('Expected Date', ''),
-                item.get('Ref Link', ''),
-                item.get('Tasks Completed', ''),
-                encrypt_wallet(item.get('Wallet Used', '')),
+                str(item.get('Protocol Name', '')),
+                str(item.get('Status', 'Active')),
+                str(item.get('Expected Date', '')),
+                str(item.get('Ref Link', '')),
+                str(item.get('Tasks Completed', '')),
+                encrypt_wallet(str(item.get('Wallet Used', ''))),
                 str(item.get('TX Count', 0)),
-                item.get('Amount Invested', ''),
-                item.get('Last Activity', ''),
-                item.get('Notes', '')
+                str(item.get('Amount Invested', '')),
+                str(item.get('Last Activity', '')),
+                str(item.get('Notes', ''))
             ])
         body = {'values': filtered_values}
         service.spreadsheets().values().clear(
@@ -505,6 +505,11 @@ else:
         if uploaded_file is not None:
             try:
                 uploaded_df = pd.read_csv(uploaded_file)
+                # Replace NaN values with empty strings
+                uploaded_df = uploaded_df.fillna('')
+                # Convert all values to strings and clean them
+                for col in uploaded_df.columns:
+                    uploaded_df[col] = uploaded_df[col].apply(lambda x: '' if str(x).lower() == 'nan' else str(x))
                 st.session_state.airdrops = uploaded_df.to_dict('records')
                 if save_user_data(st.session_state.user_id, st.session_state.airdrops):
                     st.success("✅ Data uploaded successfully!")
