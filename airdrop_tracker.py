@@ -589,8 +589,10 @@ else:
                             <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px; color: #333;">{airdrop.get('Notes', 'None')}</p>
                         </div>
                         """, unsafe_allow_html=True)
-                        if airdrop.get('Ref Link'):
+                        if airdrop.get('Ref Link') and airdrop.get('Ref Link').strip():
                             st.link_button("🔗 Open Referral Link", airdrop.get('Ref Link'), use_container_width=True)
+                        else:
+                            st.info("No referral link set")
                     with col2:
                         if st.button("✏️ Edit", key=f"edit_{idx}", use_container_width=True):
                             st.session_state[f'editing_{idx}'] = True
