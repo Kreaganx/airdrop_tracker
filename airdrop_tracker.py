@@ -10,6 +10,8 @@ from email.mime.multipart import MIMEMultipart
 import hashlib
 import random
 import string
+from cryptography.fernet import Fernet
+import base64
 
 # Page configuration
 st.set_page_config(
@@ -87,6 +89,45 @@ def generate_user_id(email):
 def generate_verification_code():
     return ''.join(random.choices(string.digits, k=6))
 
+def get_encryption_key():
+    """Get or generate encryption key from secrets"""
+    try:
+        # Use a secret key from Streamlit secrets
+        secret = st.secrets.get("encryption_key", "default-secret-key-change-this")
+        # Create a proper Fernet key from the secret
+        key = base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest())
+        return Fernet(key)
+    except Exception as e:
+        st.error(f"Encryption error: {e}")
+        return None
+
+def encrypt_wallet(wallet_address):
+    """Encrypt wallet address"""
+    if not wallet_address:
+        return ""
+    try:
+        fernet = get_encryption_key()
+        if fernet:
+            encrypted = fernet.encrypt(wallet_address.encode())
+            return base64.urlsafe_b64encode(encrypted).decode()
+        return wallet_address
+    except:
+        return wallet_address
+
+def decrypt_wallet(encrypted_wallet):
+    """Decrypt wallet address"""
+    if not encrypted_wallet:
+        return ""
+    try:
+        fernet = get_encryption_key()
+        if fernet:
+            decoded = base64.urlsafe_b64decode(encrypted_wallet.encode())
+            decrypted = fernet.decrypt(decoded)
+            return decrypted.decode()
+        return encrypted_wallet
+    except:
+        return encrypted_wallet
+
 def send_verification_email(to_email, code):
     try:
         from_email = st.secrets.get("alert_email", "")
@@ -163,7 +204,7 @@ def load_user_data(user_id):
                         'Expected Date': row[3] if len(row) > 3 else '',
                         'Ref Link': row[4] if len(row) > 4 else '',
                         'Tasks Completed': row[5] if len(row) > 5 else '',
-                        'Wallet Used': row[6] if len(row) > 6 else '',
+                        'Wallet Used': decrypt_wallet(row[6]) if len(row) > 6 else '',
                         'TX Count': int(row[7]) if len(row) > 7 and row[7] and str(row[7]).replace('-','').isdigit() else 0,
                         'Amount Invested': row[8] if len(row) > 8 else '',
                         'Last Activity': row[9] if len(row) > 9 else '',
@@ -204,7 +245,7 @@ def save_user_data(user_id, data):
                 item.get('Expected Date', ''),
                 item.get('Ref Link', ''),
                 item.get('Tasks Completed', ''),
-                item.get('Wallet Used', ''),
+                encrypt_wallet(item.get('Wallet Used', '')),
                 str(item.get('TX Count', 0)),
                 item.get('Amount Invested', ''),
                 item.get('Last Activity', ''),
@@ -417,6 +458,7 @@ else:
     <div class="info-box">
         <h3 style="color: #667eea; margin-bottom: 10px;">📋 Your Personal Tracker</h3>
         <p style="color: #666;">• Your data is private and saved to your account<br>
+        • 🔒 Wallet addresses are encrypted for security<br>
         • Add protocols, track progress, and set up alerts<br>
         • Download/upload CSV backups anytime<br>
         • Data automatically syncs when you make changes</p>
