@@ -574,12 +574,19 @@ else:
                 with st.expander(f"{status_icon} **{airdrop.get('Protocol Name', 'Unknown')}** - {status} {days_until_text}", expanded=False):
                     col1, col2 = st.columns([3, 1])
                     with col1:
+                        wallet_display = airdrop.get('Wallet Used', 'N/A')
+                        # Mask middle part of wallet for privacy but keep it readable
+                        if wallet_display and wallet_display != 'N/A' and len(wallet_display) > 10:
+                            masked_wallet = f"{wallet_display[:6]}...{wallet_display[-4:]}"
+                        else:
+                            masked_wallet = wallet_display if wallet_display else 'N/A'
+                        
                         st.markdown(f"""
                         <div style="background: white; padding: 20px; border-radius: 10px; border-left: 5px solid {status_color};">
                             <h3 style="color: #667eea; margin-top: 0;">{airdrop.get('Protocol Name', 'Unknown')}</h3>
                             <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Status:</strong> <span style="color: {status_color};">{status}</span></p>
                             <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Expected Date:</strong> {airdrop.get('Expected Date', 'Not set')} {days_until_text}</p>
-                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Wallet:</strong> <code style="color: #333;">{airdrop.get('Wallet Used', 'N/A')}</code></p>
+                            <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Wallet:</strong> <code style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px; color: #333; font-family: monospace;">{masked_wallet}</code> 🔒</p>
                             <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">TX Count:</strong> {airdrop.get('TX Count', 0)}</p>
                             <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Amount Invested:</strong> {airdrop.get('Amount Invested', 'N/A')}</p>
                             <p style="margin: 5px 0; color: #333;"><strong style="color: #333;">Last Activity:</strong> {airdrop.get('Last Activity', 'N/A')}</p>
