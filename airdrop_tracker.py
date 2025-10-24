@@ -596,11 +596,26 @@ else:
                             <p style="margin: 0; padding: 10px; background: #f5f5f5; border-radius: 5px; color: #333;">{airdrop.get('Notes', 'None')}</p>
                         </div>
                         """, unsafe_allow_html=True)
-                        ref_link = airdrop.get('Ref Link', '')
-                        if ref_link and str(ref_link).strip() and str(ref_link).strip() != 'nan':
-                            st.link_button("🔗 Open Referral Link", str(ref_link).strip(), use_container_width=True)
+                        
+                        # Add copy wallet button if wallet exists
+                        if wallet_display and wallet_display != 'N/A':
+                            col_link, col_copy = st.columns([3, 1])
+                            with col_link:
+                                ref_link = airdrop.get('Ref Link', '')
+                                if ref_link and str(ref_link).strip() and str(ref_link).strip() != 'nan':
+                                    st.link_button("🔗 Open Referral Link", str(ref_link).strip(), use_container_width=True)
+                                else:
+                                    st.info("No referral link set")
+                            with col_copy:
+                                if st.button("📋 Copy Wallet", key=f"copy_wallet_{idx}", use_container_width=True):
+                                    st.code(wallet_display, language=None)
+                                    st.success("✅ Wallet shown above!")
                         else:
-                            st.info("No referral link set")
+                            ref_link = airdrop.get('Ref Link', '')
+                            if ref_link and str(ref_link).strip() and str(ref_link).strip() != 'nan':
+                                st.link_button("🔗 Open Referral Link", str(ref_link).strip(), use_container_width=True)
+                            else:
+                                st.info("No referral link set")
                     with col2:
                         if st.button("✏️ Edit", key=f"edit_{idx}", use_container_width=True):
                             st.session_state[f'editing_{idx}'] = True
